@@ -1,0 +1,66 @@
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QLabel,
+                             QVBoxLayout, QHBoxLayout, QRadioButton,
+                             QGroupBox, QButtonGroup)
+from PyQt5.QtGui import QFont
+from random import shuffle, randint
+
+back = (200,255, 255)
+win_Widht = 600
+win_Height = 500
+window = display.set_mode((win_Widht,win_Height))
+window.fill()
+clock = time.Clock()
+FPS = 60
+
+
+
+class GameSprite(sprite.Sprite):
+ # конструктор класса
+   def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+       # Вызываем конструктор класса (Sprite):
+       sprite.Sprite.__init__(self)
+ 
+       # каждый спрайт должен хранить свойство image - изображение
+       self.image = transform.scale(image.load(player_image), (size_x, size_y))
+       self.speed = player_speed
+ 
+       # каждый спрайт должен хранить свойство rect - прямоугольник, в который он вписан
+       self.rect = self.image.get_rect()
+       self.rect.x = player_x
+       self.rect.y = player_y
+ # метод, отрисовывающий героя на окне
+   def reset(self):
+       window.blit(self.image, (self.rect.x, self.rect.y))
+ 
+# класс главного игрока
+class Player(GameSprite):
+   # метод для управления спрайтом стрелками клавиатуры
+    def update_r(self):
+        keys = key.get_pressed()
+        if keys[K_UP] and self.rect.x > 5:
+            self.rect.x -= self.speed
+        if keys[K_DOWN] and self.rect.x < win_width - 80:
+            self.rect.x += self.speed
+    def update_l(self):
+        keys = key.get_pressed()
+        if keys[K_W] and self.rect.x > 5:
+            self.rect.x -= self.speed
+        if keys[K_S] and self.rect.x < win_width - 80:
+            self.rect.x += self.speed
+class Enemy(GameSprite):
+   # движение врага
+   def update(self):
+       self.rect.y += self.speed
+       global lost
+       # исчезает, если дойдет до края экрана
+       if self.rect.y > win_height:
+           self.rect.x = randint(80, win_width - 80)
+           self.rect.y = 0
+           lost = lost + 1
+while game:
+    for e in event.get():
+        if e.type == QUIT:
+            game = False
+    display.update()
+    clock.tick(FPS)
