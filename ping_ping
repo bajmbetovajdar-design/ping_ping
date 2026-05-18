@@ -1,66 +1,144 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QLabel,
-                             QVBoxLayout, QHBoxLayout, QRadioButton,
-                             QGroupBox, QButtonGroup)
-from PyQt5.QtGui import QFont
-from random import shuffle, randint
+import pygame
+from random import randint
 
-back = (200,255, 255)
-win_Widht = 600
-win_Height = 500
-window = display.set_mode((win_Widht,win_Height))
-window.fill()
-clock = time.Clock()
+# Инициализация Pygame и шрифтов
+pygame.init()
+pygame.font.init()
+
+# Настройки окна
+back = (200, 255, 255)
+win_width = 600
+win_height = 500
+window = pygame.display.set_mode((win_width, win_height))
+pygame.display.set_caption("Пинг-Понг")
+
+clock = pygame.time.Clock()
 FPS = 60
 
+# Базовый класс для спрайтов
+class GameSprite(pygame.sprite.Sprite):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+        pygame.sprite.Sprite.__init__(self)
+        try:
+            self.image = pygame.transform.scale(pygame.image.load(player_image), (size_x, size_y))
+        except:
+            # Автоматическая заглушка, если картинок нет в папке
+            self.image = pygame.Surface((size_x, size_y))
+            if size_x == size_y:
+                self.image.fill((255, 165, 0)) # Мяч оранжевый
+            else:
+                self.image.fill((0, 0, 128))    # Ракетки синие
 
+        self.speed = player_speed
+        self.rect = self.image.get_rect()
+        self.rect.x = player_x
+        self.rect.y = player_y
 
-class GameSprite(sprite.Sprite):
- # конструктор класса
-   def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
-       # Вызываем конструктор класса (Sprite):
-       sprite.Sprite.__init__(self)
- 
-       # каждый спрайт должен хранить свойство image - изображение
-       self.image = transform.scale(image.load(player_image), (size_x, size_y))
-       self.speed = player_speed
- 
-       # каждый спрайт должен хранить свойство rect - прямоугольник, в который он вписан
-       self.rect = self.image.get_rect()
-       self.rect.x = player_x
-       self.rect.y = player_y
- # метод, отрисовывающий героя на окне
-   def reset(self):
-       window.blit(self.image, (self.rect.x, self.rect.y))
- 
-# класс главного игрока
+    def reset(self):
+        window.blit(self.image, (self.rect.x, self.rect.y))
+
+# Класс игрока (Ракетки)
 class Player(GameSprite):
-   # метод для управления спрайтом стрелками клавиатуры
     def update_r(self):
-        keys = key.get_pressed()
-        if keys[K_UP] and self.rect.x > 5:
-            self.rect.x -= self.speed
-        if keys[K_DOWN] and self.rect.x < win_width - 80:
-            self.rect.x += self.speed
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP] and self.rect.y > 5:
+            self.rect.y -= self.speed
+        if keys[pygame.K_DOWN] and self.rect.y < win_height - self.rect.height - 5:
+            self.rect.y += self.speed
+
     def update_l(self):
-        keys = key.get_pressed()
-        if keys[K_W] and self.rect.x > 5:
-            self.rect.x -= self.speed
-        if keys[K_S] and self.rect.x < win_width - 80:
-            self.rect.x += self.speed
-class Enemy(GameSprite):
-   # движение врага
-   def update(self):
-       self.rect.y += self.speed
-       global lost
-       # исчезает, если дойдет до края экрана
-       if self.rect.y > win_height:
-           self.rect.x = randint(80, win_width - 80)
-           self.rect.y = 0
-           lost = lost + 1
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w] and self.rect.y > 5:
+            self.rect.y -= self.speed
+        if keys[pygame.K_s] and self.rect.y < win_height - self.rect.height - 5:
+            self.rect.y += self.speed
+
+# Класс мяча с физикой движения
+class Ball(GameSprite):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+        super().__init__(player_image, player_x, player_y, size_x, size_y, player_speed)
+        self.speed_x = player_speed
+        self.speed_y = player_speed
+
+    def update(self):
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+        # Отскок от пола и потолка
+        if self.rect.y <= 0 or self.rect.y >= win_height - self.rect.height:
+            self.speed_y *= -1
+
+# Текст и шрифты
+font = pygame.font.Font(None, 35)
+lose1 = font.render('PLAYER 1 LOSE!', True, (180, 0, 0))
+lose2 = font.render('PLAYER 2 LOSE!', True, (180, 0, 0))
+
+# Создание объектов (размеры изменены на читаемые: 15x100 для ракеток, 30x30 для мяча)
+racket1 = Player('racket.png', 30, 200, 15, 100, 6)
+racket2 = Player('racket.png', 550, 200, 15, 100, 6)
+ball = Ball('tenis_ball.png', 290, 240, 30, 30, 4)
+
+# Игровой счет
+score_racket1 = 0
+score_racket2 = 0
+max_score = 5
+
+game = True
+finish = False
+
+# Основной цикл
 while game:
-    for e in event.get():
-        if e.type == QUIT:
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
             game = False
-    display.update()
+
+    if not finish:
+        # Фон и обновление позиций
+        window.fill(back)
+        racket1.update_l()
+        racket2.update_r()
+        ball.update()
+
+        # Проверка столкновения мяча с ракетками
+        if pygame.sprite.collide_rect(racket1, ball):
+            ball.speed_x = abs(ball.speed_x)
+        if pygame.sprite.collide_rect(racket2, ball):
+            ball.speed_x = -abs(ball.speed_x)
+
+        # Проверка вылета за левую границу (проиграл игрок 1)
+        if ball.rect.x < 0:
+            score_racket2 += 1
+            ball.rect.x, ball.rect.y = 290, 240
+            ball.speed_x *= -1
+            if score_racket2 >= max_score:
+                finish = True
+                window.blit(lose1, (200, 200))
+
+        # Проверка вылета за правую границу (проиграл игрок 2)
+        if ball.rect.x > win_width:
+            score_racket1 += 1
+            ball.rect.x, ball.rect.y = 290, 240
+            ball.speed_x *= -1
+            if score_racket1 >= max_score:
+                finish = True
+                window.blit(lose2, (200, 200))
+
+        # Отрисовка счета на экране
+        text_score = font.render(f"{score_racket1} : {score_racket2}", True, (0, 0, 0))
+        window.blit(text_score, (win_width // 2 - 20, 20))
+
+        # Отрисовка спрайтов
+        racket1.reset()
+        racket2.reset()
+        ball.reset()
+
+    else:
+        # Если игра завершена, показываем надпись проигрыша
+        if score_racket2 >= max_score:
+            window.blit(lose1, (200, 200))
+        else:
+            window.blit(lose2, (200, 200))
+
+    pygame.display.update()
     clock.tick(FPS)
+
+pygame.quit()
